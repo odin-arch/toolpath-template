@@ -220,6 +220,21 @@ application unless that application says otherwise.
   `app/shared/pretool-presets.ts`, unreferenced on purpose and going back
   through the same `ToolRequest.presets`. Do not write a second exporter here — `docs/CATALOG-SPEC.md` § 5 has what changed and
   what is left.
+  **Nor is the Mastercam export** (2026-09-12) — it is
+  `@toolpath/tool-support/export/mastercam`, and a `.TOOLDB` is a SQLite
+  database carrying Mastercam's own 79-table schema, pinned from a real library
+  upstream. `app/shared/mastercam-input.ts` is that seam, and it reads
+  differently from the Fusion one on purpose: Fusion embeds a holder inside the
+  tool record, so one tool in two holders is two records, where Mastercam joins
+  them relationally — so the order list goes in **grouped**, one entry per
+  distinct tool carrying one set-up per stack, under the catalog's own guids.
+  The one identifier this application mints is the assembly's, per stack, and
+  that module says why. What both formats read is `app/shared/export-input.ts`;
+  one dialog serves both, `app/components/library-export-dialog.tsx`, and the
+  format supplies its four strings. **The exporter is imported on the press**,
+  not at the top of the route: it carries 82 KB of generated schema, and
+  `vite.config.ts` pre-bundles the subpath so that import is a fetch rather
+  than a discovery.
   **A holder can be drawn from its own CAD model** rather than from the nine
   numbers a vendor publishes: `catalog-profiles` is a second Vite alias beside
   `catalog-dataset`, `shared/catalog.ts` `getProfile` is the only way to reach
@@ -317,7 +332,10 @@ application unless that application says otherwise.
 | what is on the order list, for both pages             | `app/shared/order-list.ts`                           |
 | whether a row has anything ordered, and what to buy   | `isIncomplete` / `componentTotals`, same file        |
 | which of four things the page is being asked          | `asked()`, same file                                 |
+| what both exporters read of a row                     | `app/shared/export-input.ts`                         |
 | the bill as a Fusion library, and what its notes say  | `app/shared/fusion-input.ts`                         |
+| the bill as a Mastercam `.TOOLDB`, and its notes      | `app/shared/mastercam-input.ts`                      |
+| the one dialog both exports ask their question in     | `app/components/library-export-dialog.tsx`           |
 | the three presses over the part that add a row        | `app/components/add-bar.tsx`                         |
 | whether the presses and the rows are drawn at all     | `app/shared/part-chrome.ts`                          |
 | where the part is framed, beside the questions        | `app/shared/frame-inset.ts`                          |

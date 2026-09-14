@@ -1,5 +1,4 @@
-import type { CatalogTool, Holder, HolderProfile } from '@toolpath/catalog-data'
-import type { HolderProfile as DomainProfile } from '@toolpath/tool-support'
+import type { Holder } from '@toolpath/catalog-data'
 import type { ExportNote } from '@toolpath/tool-support/export'
 import type {
   CatalogHolder,
@@ -7,16 +6,27 @@ import type {
   FusionLibrary,
   ToolRequest,
 } from '@toolpath/tool-support/export/fusion'
+import {
+  browserGuid,
+  measuredShape,
+  type ExportDiagnostic,
+  type ExportReport,
+  type MintGuid,
+  type OrderedStack,
+} from 'shared/export-input'
 
 /**
  * The order list as `@toolpath/tool-support/export/fusion` wants to be asked.
  *
- * **This is the whole seam.** The exporter itself is not this application's —
- * its per-type rules come from Autodesk's own published JSON Schema, reduced
- * into that repository's `fusion/digest.json` and watched for drift. What is
- * ours is the translation from the shapes this catalog stores into the shapes
- * that package takes, and it lives here rather than in the route so it can be
- * tested without mounting a page.
+ * **This is the Fusion half of the seam.** The exporter itself is not this
+ * application's — its per-type rules come from Autodesk's own published JSON
+ * Schema, reduced into that repository's `fusion/digest.json` and watched for
+ * drift. What is ours is the translation from the shapes this catalog stores
+ * into the shapes that package takes, and it lives here rather than in the
+ * route so it can be tested without mounting a page.
+ *
+ * What this format and Mastercam's ask for in the same words is
+ * `shared/export-input.ts`; `shared/mastercam-input.ts` is the other half.
  *
  * The route resolves guids through `catalog.ts` and hands the records over;
  * nothing here reaches for the dataset.
@@ -32,59 +42,6 @@ import type {
  * Carrying those two fields through ingest is a catalog version bump and a
  * re-ingest, and until then the silence is honest rather than invented.
  */
-
-/** One distinct stack on the order list, resolved through the current catalog. */
-export interface OrderedStack {
-  /** The order list's own key for the row, so a note can be sent back to it. */
-  readonly key: string
-  readonly tool: CatalogTool
-  readonly holder?: Holder | undefined
-  /**
-   * The holder measured off the vendor's CAD model, where the catalog has one.
-   *
-   * Preferred over the published dimensions when it exists: a `Holder` states a
-   * nose, a body and a flange, and the exporter draws three stepped cylinders
-   * from them, where a profile is the vendor's own silhouette and carries the
-   * V-flange groove and the thread relief. `fusionHolder` cuts it at its own
-   * gage line, so the two arms agree about where the holder starts.
-   */
-  readonly profile?: HolderProfile | null | undefined
-  /** The setout selected for this stack; absent means the catalog's LBH setup value. */
-  readonly stickout?: number | undefined
-}
-
-/**
- * The measured silhouette in the shape the domain states one, or `null` to use
- * the vendor's published dimensions instead.
- *
- * Two things make this a conversion rather than a pass-through. This catalog's
- * `HolderProfile` is a *measurement record* — a guid, the catalog number, how
- * well the model agreed with the vendor's gage length — where the domain's is
- * the *shape*, and the two fields the shape needs and the measurement does not
- * carry, `colletSeries` and `colletProtrusion`, are on the holder beside it.
- *
- * **And an incomplete model is refused.** `complete: false` means the vendor's
- * STEP file stops short — five BTKV30 models end at the threaded nose and omit
- * the collet nut altogether. That missing piece is at the cutting end, which is
- * the end that fouls the part, so exporting the measurement would hand Fusion a
- * holder shorter than the real one and let it clear material it cannot. The
- * published dimensions are the honest answer there, and `catalog.ts` has
- * already backfilled them from whatever the model did reach.
- */
-const measuredShape = (
-  holder: Holder,
-  profile: HolderProfile | null | undefined,
-): DomainProfile | null => {
-  if (profile === undefined || profile === null || !profile.complete) {
-    return null
-  }
-  return {
-    points: profile.points,
-    datum: profile.datum,
-    colletSeries: holder.colletSeries,
-    colletProtrusion: holder.colletProtrusion,
-  }
-}
 
 /**
  * One stack, as the exporter takes it, with what is needed to read its notes
@@ -105,23 +62,6 @@ export interface StackRequest {
   readonly catalogNumber: string
   readonly request: ToolRequest
 }
-
-/**
- * A guid per exported record, minted here rather than taken from the catalog.
- *
- * **The package deliberately mints none**, and it is right not to: reusing a
- * catalog guid is what makes a re-exported library update a tool in Fusion
- * instead of adding a second copy of it. But an order list is not a catalog. The
- * same end mill can be ordered in two different holders, and those are two
- * assemblies a machinist sets up separately — under one guid Fusion would hold
- * only the second. So identity here is per stack, and this application owns it.
- *
- * The cost is that a re-export is a fresh set of tools rather than an update of
- * the last one, which is what this page already did.
- */
-export type MintGuid = () => string
-
-const browserGuid: MintGuid = () => globalThis.crypto.randomUUID()
 
 /**
  * The holder as the exporter takes one: the shape, plus who made it.
@@ -268,18 +208,6 @@ export const fusionInput = (
     }
   })
 
-/** One thing worth telling whoever pressed the button, in their words. */
-export interface FusionExportDiagnostic {
-  readonly catalogNumber: string
-  readonly reason: string
-}
-
-export interface FusionReport {
-  readonly exported: number
-  readonly skipped: ReadonlyArray<FusionExportDiagnostic>
-  readonly holderWarnings: ReadonlyArray<FusionExportDiagnostic>
-}
-
 /**
  * What the export has to say for itself, read back off the notes.
  *
@@ -298,10 +226,10 @@ export const fusionReport = (
   requests: ReadonlyArray<StackRequest>,
   document: FusionLibrary,
   notes: ReadonlyArray<ExportNote>,
-): FusionReport => {
+): ExportReport => {
   const written = new Set(document.data.map((record) => record.guid))
-  const skipped: Array<FusionExportDiagnostic> = []
-  const holderWarnings: Array<FusionExportDiagnostic> = []
+  const skipped: Array<ExportDiagnostic> = []
+  const warnings: Array<ExportDiagnostic> = []
 
   for (const request of requests) {
     const { catalogNumber, toolGuid, holderGuid } = request
@@ -320,10 +248,10 @@ export const fusionReport = (
     }
     for (const note of notes) {
       if (note.subject === holderGuid && note.kind === 'dropped') {
-        holderWarnings.push({ catalogNumber, reason: note.message })
+        warnings.push({ catalogNumber, reason: note.message })
       }
     }
   }
 
-  return { exported: document.data.length, skipped, holderWarnings }
+  return { exported: document.data.length, skipped, warnings }
 }

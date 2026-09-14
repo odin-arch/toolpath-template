@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { onThePart, openCube, openCubeWithHole, orderList } from './cube-fixture'
 
 /**
@@ -4801,6 +4802,73 @@ test('downloads the order list as a Fusion tool library', async ({ page }) => {
 
   expect(text).toMatch(/"LB": \d+\.\d/)
   expect(text).toMatch(/"NOF": \d+,/)
+
+  await expect(dialog.getByText(/^Downloaded 1 tool assembly\./)).toBeVisible()
+})
+
+/**
+ * **The same bill leaves as a file Mastercam will load.**
+ *
+ * The second exporter, added 2026-09-12, and the reason this is a separate test
+ * rather than a second assertion on the one above: a `.TOOLDB` is a SQLite
+ * database, so what proves it landed is opening it and asking SQLite — which
+ * `node:sqlite` can do here and no unit test in jsdom should try to.
+ *
+ * Three things only this can see. That the dynamic `import()` behind the press
+ * resolves in a real browser at all — the exporter carries 82 KB of pinned
+ * schema and is deliberately not in the page's first payload, so a
+ * mis-configured `optimizeDeps` breaks this button and nothing else. That the
+ * bytes survive `saveInBrowser`, which takes a `Uint8Array` here and a string
+ * for Fusion. And that the file is a database rather than a plausible-looking
+ * buffer: `PRAGMA integrity_check` walks every page and every index entry,
+ * which is the only way to catch a b-tree written slightly wrong — the failure
+ * mode there is not an exception but a file that opens and is missing rows.
+ */
+test('downloads the order list as a Mastercam tool library', async ({ page }) => {
+  await ready(page)
+  const tree = await buildStack(page)
+  await tree.getByRole('button', { name: 'Add to order list' }).click()
+
+  await page.getByRole('link', { name: 'Order list' }).click()
+  await page.getByRole('button', { name: 'Export Mastercam library' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Export Mastercam tool library' })
+  await expect(dialog).toBeVisible()
+
+  const waiting = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Download .TOOLDB' }).click()
+  const download = await waiting
+  expect(download.suggestedFilename()).toBe('tool-library.TOOLDB')
+
+  const path = await download.path()
+  expect(readFileSync(path).subarray(0, 15).toString('utf8')).toBe('SQLite format 3')
+
+  const db = new DatabaseSync(path, { readOnly: true })
+  try {
+    expect(db.prepare('PRAGMA integrity_check').get()).toMatchObject({ integrity_check: 'ok' })
+
+    // One row of the order list is one tool, one holder and one assembly that
+    // joins them. `TlAssemblyComponent` is the flat parent/child list: the
+    // holder is the root and the tool hangs off it, so two rows per assembly.
+    const count = (table: string) =>
+      (db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n
+    expect(count('TlTool')).toBe(1)
+    expect(count('TlToolMill')).toBe(1)
+    expect(count('TlAssembly')).toBe(1)
+    expect(count('TlAssemblyComponent')).toBe(2)
+
+    // The geometry is relational rather than hidden in the base row's blob,
+    // which is what makes this exporter possible at all — so a real dimension
+    // is readable back out, in inches, the format's only unit.
+    const mill = db.prepare('SELECT OverallLength, FluteCount FROM TlToolMill').get() as {
+      OverallLength: number
+      FluteCount: number
+    }
+    expect(mill.OverallLength).toBeGreaterThan(0)
+    expect(mill.FluteCount).toBeGreaterThan(0)
+  } finally {
+    db.close()
+  }
 
   await expect(dialog.getByText(/^Downloaded 1 tool assembly\./)).toBeVisible()
 })

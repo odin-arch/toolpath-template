@@ -126,6 +126,13 @@ export default defineConfig(({ mode }) => {
         '@toolpath/ui',
         '@toolpath/viewer',
         '@toolpath/viewer/engine',
+        // The exporters especially. `export/mastercam` carries Mastercam's
+        // pinned 79-table schema — 82 KB of it — and is reached by a dynamic
+        // import on a button press, which is discovery in the middle of a
+        // session: exactly the case the 504 above describes.
+        '@toolpath/tool-support',
+        '@toolpath/tool-support/export/fusion',
+        '@toolpath/tool-support/export/mastercam',
       ],
     },
     plugins: [
