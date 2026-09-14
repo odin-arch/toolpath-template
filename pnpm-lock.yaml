@@ -54,8 +54,8 @@ importers:
         specifier: 9.7.0
         version: 9.7.0(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(three@0.185.1)
       '@toolpath/app-support':
-        specifier: 0.1.4
-        version: 0.1.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: 0.1.6
+        version: 0.1.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@toolpath/catalog-data':
         specifier: workspace:*
         version: link:../../packages/catalog-data
@@ -69,11 +69,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/part-server
       '@toolpath/tool-drawing':
-        specifier: 1.0.1
-        version: 1.0.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: 1.0.3
+        version: 1.0.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@toolpath/tool-support':
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.6.0
+        version: 0.6.0
       '@toolpath/ui':
         specifier: 1.0.0
         version: 1.0.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.0))(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwindcss@4.3.3)
@@ -178,11 +178,11 @@ importers:
         specifier: 0.4.1
         version: 0.4.1
       '@toolpath/app-support':
-        specifier: 0.1.4
-        version: 0.1.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: 0.1.6
+        version: 0.1.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@toolpath/tool-support':
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.6.0
+        version: 0.6.0
       '@toolpath/ui':
         specifier: 1.0.0
         version: 1.0.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.0))(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwindcss@4.3.3)
@@ -278,11 +278,11 @@ importers:
         specifier: workspace:*
         version: link:../part-contracts
       '@toolpath/tool-scraper':
-        specifier: 3.0.1
-        version: 3.0.1
+        specifier: 3.0.3
+        version: 3.0.3
       '@toolpath/tool-support':
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.6.0
+        version: 0.6.0
     devDependencies:
       '@types/node':
         specifier: 24.10.1
@@ -322,8 +322,8 @@ importers:
         specifier: 0.4.1
         version: 0.4.1
       '@toolpath/tool-support':
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.6.0
+        version: 0.6.0
       '@toolpath/viewer':
         specifier: 1.1.1
         version: 1.1.1(@react-three/drei@10.7.8(@react-three/fiber@9.7.0(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(three@0.185.1))(@types/react@19.2.18)(@types/three@0.185.4)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(three@0.185.1))(@react-three/fiber@9.7.0(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(three@0.185.1))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(three@0.185.1)
@@ -1301,27 +1301,27 @@ packages:
     resolution: {integrity: sha512-SJbwQWSJoYQextAdJXHQQMCIFZ/OB+PijLDuhQqQPqy95TOApSpT5emXHhHPRghHQLwdSlKCXz5aQ7lv6nPFYg==}
     engines: {node: '>=20'}
 
-  '@toolpath/app-support@0.1.4':
-    resolution: {integrity: sha512-41uT8GLG2IMOKJJqmqnm0rtyTPBs+w43jN7Uhw46cgvhoVe8AMw2O9jZ24V4dLQxwCMunwddeUbMYPjAdERPMg==}
+  '@toolpath/app-support@0.1.6':
+    resolution: {integrity: sha512-QVSyBuq2joLzcBjadqp04bj1y87yvj+0e+0at9q1CZjSdumeey56nQ6ttcB0j4OorAniSmKMiXxIqvgJiCNB3A==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
 
-  '@toolpath/tool-drawing@1.0.1':
-    resolution: {integrity: sha512-mppu5TPVDoscHY5gi8eSbijRE7Upi5XTCaVq9cDm/PffbCo3edBbGqa9pBNJURR7kz58V2tTtMQNmCgLdGpWDQ==}
+  '@toolpath/tool-drawing@1.0.3':
+    resolution: {integrity: sha512-dIQma1SRSIjUxtfAtIlAk6MNbEV37bo9UuVy4CdXYkIkddwNnMqVOipSIBvLcpxnAGNdcr6cPLXSHMtJORFB4g==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
 
-  '@toolpath/tool-scraper@3.0.1':
-    resolution: {integrity: sha512-JuSLGX8cSXWXFP/qvoZu6CDWRljmKA5ViM6VVhOOKV8fArlERInHP33nZM7DN5Vkd1aEFL/seDWfrQC3ukJIQw==}
+  '@toolpath/tool-scraper@3.0.3':
+    resolution: {integrity: sha512-Ft/EdcgHGO0PDz55mTtybNQ+TbsRIR20Tm/6VdR0T9jG6EHUqWO4XOlV7RTDdKGK4othlGeRwFbs+2+aDsAnYw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@toolpath/tool-support@0.4.0':
-    resolution: {integrity: sha512-LVyh/qwcV8izuzKgdfbnUdgGcCPZzxnfFqYlHGF18WO6tAETb/NB7jVgi9idA+13lWM2WFZoq4O/A+apWMuvbA==}
+  '@toolpath/tool-support@0.6.0':
+    resolution: {integrity: sha512-X/UbPVkQSGHMFhuMStVTUygqwXO208yTjxgB8u1TNw99Khy3aVezSzOACE67Q/EKc7AzEgIFPwoHzBCr9QKqyQ==}
     engines: {node: '>=20'}
 
   '@toolpath/ui@1.0.0':
@@ -3970,24 +3970,24 @@ snapshots:
 
   '@toolpath/api@0.4.1': {}
 
-  '@toolpath/app-support@0.1.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@toolpath/app-support@0.1.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
-      '@toolpath/tool-support': 0.4.0
+      '@toolpath/tool-support': 0.6.0
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  '@toolpath/tool-drawing@1.0.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@toolpath/tool-drawing@1.0.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
-      '@toolpath/tool-support': 0.4.0
+      '@toolpath/tool-support': 0.6.0
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  '@toolpath/tool-scraper@3.0.1':
+  '@toolpath/tool-scraper@3.0.3':
     dependencies:
-      '@toolpath/tool-support': 0.4.0
+      '@toolpath/tool-support': 0.6.0
       htmlparser2: 12.0.0
 
-  '@toolpath/tool-support@0.4.0': {}
+  '@toolpath/tool-support@0.6.0': {}
 
   '@toolpath/ui@1.0.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.0))(@types/react@19.2.18)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tailwindcss@4.3.3)':
     dependencies:

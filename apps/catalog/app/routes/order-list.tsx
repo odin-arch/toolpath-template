@@ -13,7 +13,11 @@ import { Badge, Button, Card, IconButton, cn, Input } from '@toolpath/ui'
 import { formatLength, type UnitSystem } from '@toolpath/tool-support'
 import type { CatalogTool, Collet, Holder } from '@toolpath/catalog-data'
 import { AppHeader } from 'components/app-header'
-import { FusionExportDialog } from 'components/fusion-export-dialog'
+import {
+  FUSION_FORMAT,
+  LibraryExportDialog,
+  MASTERCAM_FORMAT,
+} from 'components/library-export-dialog'
 import { ColletIcon, HolderIcon, ToolTypeIcon, formLabel } from './../components/tool-icons'
 import { allTools, getCollet, getHolder, getProfile, getTool } from 'shared/catalog'
 import {
@@ -45,6 +49,8 @@ import {
   sanitizeName,
 } from '@toolpath/tool-support/export/fusion'
 import { fusionInput, fusionReport } from 'shared/fusion-input'
+import { mastercamInput, mastercamReport } from 'shared/mastercam-input'
+import type { OrderedStack } from 'shared/export-input'
 import { saveInBrowser } from 'shared/save-file'
 import { recallPart } from 'shared/part-session'
 import { useUnit } from 'shared/use-unit'
@@ -506,20 +512,20 @@ const Bom = () => {
 
   /** Which way the list is read: by assembly, or by what the assemblies come to. */
   const [view, setView] = useState<'assembly' | 'components'>('assembly')
-  const [fusionDialogOpen, setFusionDialogOpen] = useState(false)
+  /** Which library is being asked for, or none. */
+  const [exporting, setExporting] = useState<'fusion' | 'mastercam' | null>(null)
 
   /**
-   * The whole bill as a Fusion library, saved from the browser.
+   * The bill resolved through the catalog, as either exporter takes it.
    *
    * Built here rather than on the server because everything it needs is already
    * in this page: the sheet's guids, resolved through the catalog. This route
-   * resolves them and nothing more — `shared/fusion-input.ts` turns the records
-   * into what the exporter takes and reads its notes back, and the exporter
-   * itself is `@toolpath/tool-support/export/fusion`, whose rules come from
-   * Autodesk's own schema rather than from anything written here.
+   * resolves them and nothing more — `shared/export-input.ts` is what both
+   * formats read, and one module per format turns it into what that exporter
+   * takes and reads its notes back.
    */
-  const downloadFusion = async (name: string) => {
-    const requests = fusionInput(
+  const stacks = useMemo<Array<OrderedStack>>(
+    () =>
       assemblies.flatMap(({ key, choice }) => {
         const tool = getTool(choice.toolGuid)
         if (tool === null) {
@@ -535,13 +541,47 @@ const Bom = () => {
           },
         ]
       }),
-    )
+    [assemblies],
+  )
+
+  /**
+   * The whole bill as a Fusion library, saved from the browser.
+   *
+   * The exporter is `@toolpath/tool-support/export/fusion`, whose rules come
+   * from Autodesk's own schema rather than from anything written here.
+   */
+  const downloadFusion = async (name: string) => {
+    const requests = fusionInput(stacks)
     const { document, notes } = fusionLibrary({
       tools: requests.map((each) => each.request),
     })
     const report = fusionReport(requests, document, notes)
     if (report.exported > 0) {
       saveInBrowser(`${sanitizeName(name)}.json`, fusionLibraryJson(document), 'application/json')
+    }
+    return report
+  }
+
+  /**
+   * The same bill as a Mastercam `.TOOLDB`, which is a SQLite database.
+   *
+   * **Imported on the press rather than at the top of the file.** The exporter
+   * carries Mastercam's own 79-table schema — 82 KB of generated source before
+   * a single tool — and every visitor to this page would otherwise download it
+   * to find out whether they wanted it. `vite.config.ts` pre-bundles the
+   * subpath so that this import is a fetch rather than a discovery.
+   *
+   * `sanitizeName` is Fusion's and is used on both: it is a pure string
+   * function about filenames, and a second copy of it here would be a second
+   * opinion about what a filename may contain.
+   */
+  const downloadMastercam = async (name: string) => {
+    const { request, stacks: rows } = mastercamInput(stacks)
+    const { mastercamLibrary } = await import('@toolpath/tool-support/export/mastercam')
+    const { document, notes } = mastercamLibrary(request)
+    const report = mastercamReport(rows, notes)
+    if (report.exported > 0) {
+      saveInBrowser(`${sanitizeName(name)}.TOOLDB`, document, 'application/vnd.sqlite3')
     }
     return report
   }
@@ -602,17 +642,32 @@ const Bom = () => {
               ))}
             </span>
             {assemblies.length === 0 ? null : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setFusionDialogOpen(true)}
-                title="Every assembly on this bill, as a Fusion tool library"
-                className="text-2xs focus-visible:ring-info/60 border-info/40 text-info hover:border-info/70 hover:bg-info/10 ml-auto inline-flex items-center gap-1 rounded border px-2 py-1 font-semibold whitespace-nowrap transition focus-visible:ring-1 focus-visible:outline-none"
-              >
-                <DownloadSimpleIcon aria-hidden="true" />
-                Export Fusion library
-              </Button>
+              /*
+                **One bill, two CAM systems** (Justin, 2026-09-12). A shop runs
+                the post it runs, and which one is not this page's business, so
+                neither button is the default and neither is behind the other.
+              */
+              <span className="ml-auto inline-flex items-center gap-1">
+                {(
+                  [
+                    ['fusion', 'Export Fusion library', FUSION_FORMAT.name],
+                    ['mastercam', 'Export Mastercam library', MASTERCAM_FORMAT.name],
+                  ] as const
+                ).map(([format, label, name]) => (
+                  <Button
+                    key={format}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setExporting(format)}
+                    title={`Every assembly on this bill, as a ${name} tool library`}
+                    className="text-2xs focus-visible:ring-info/60 border-info/40 text-info hover:border-info/70 hover:bg-info/10 inline-flex items-center gap-1 rounded border px-2 py-1 font-semibold whitespace-nowrap transition focus-visible:ring-1 focus-visible:outline-none"
+                  >
+                    <DownloadSimpleIcon aria-hidden="true" />
+                    {label}
+                  </Button>
+                ))}
+              </span>
             )}
           </p>
           <div className="min-h-0 flex-1 overflow-auto">
@@ -900,13 +955,14 @@ const Bom = () => {
           </div>
         </Card>
       </div>
-      {fusionDialogOpen ? (
-        <FusionExportDialog
+      {exporting === null ? null : (
+        <LibraryExportDialog
+          format={exporting === 'fusion' ? FUSION_FORMAT : MASTERCAM_FORMAT}
           initialName="tool-library"
-          onCancel={() => setFusionDialogOpen(false)}
-          onExport={downloadFusion}
+          onCancel={() => setExporting(null)}
+          onExport={exporting === 'fusion' ? downloadFusion : downloadMastercam}
         />
-      ) : null}
+      )}
     </main>
   )
 }

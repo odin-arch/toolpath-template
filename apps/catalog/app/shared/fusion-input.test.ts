@@ -5,7 +5,8 @@ import {
   fusionLibrary,
   fusionLibraryJson,
 } from '@toolpath/tool-support/export/fusion'
-import { DEFAULT_PRESET_NAME, fusionInput, fusionReport, type OrderedStack } from './fusion-input'
+import { DEFAULT_PRESET_NAME, fusionInput, fusionReport } from './fusion-input'
+import type { OrderedStack } from './export-input'
 
 /**
  * The seam between this catalog and `@toolpath/tool-support/export/fusion`.
@@ -202,7 +203,7 @@ describe('what the export has to say for itself', () => {
 
     expect(report.exported).toBe(1)
     expect(report.skipped).toEqual([])
-    expect(report.holderWarnings).toEqual([])
+    expect(report.warnings).toEqual([])
   })
 
   it('names the tool Fusion refused, by the number a machinist orders it under', () => {
@@ -222,15 +223,38 @@ describe('what the export has to say for itself', () => {
     expect(report.skipped[0]?.reason).toContain('RE')
   })
 
-  it('passes on what the holder could not say, against the tool it was on', () => {
+  /**
+   * A holder note reaches the report under the tool it was raised against,
+   * because a holder guid is not what a machinist orders anything by.
+   *
+   * The case used to be a holder stating no gauge length at all. That stopped
+   * being a warning in `@toolpath/tool-support` 0.5.0: where the exporter once
+   * `dropped` the gauge length and left Fusion to ask, it now `filled`s it with
+   * the height of the shape it exported, which is a real number rather than a
+   * gap. A `filled` note is the format's own convention and is deliberately not
+   * surfaced — the test below this one is the rule — so the case that still
+   * raises something a shop has to act on is a holder whose stated gauge length
+   * its own published dimensions contradict.
+   */
+  it('passes on what the holder got wrong, against the tool it was on', () => {
+    const longGauge: Holder = { ...holder, gaugeLength: 80 }
+    const requests = fusionInput(oneStack({ holder: longGauge }), counting())
+    const { document, notes } = fusionLibrary({ tools: requests.map((each) => each.request) })
+    const report = fusionReport(requests, document, notes)
+
+    expect(report.exported).toBe(1)
+    expect(report.warnings[0]?.catalogNumber).toBe('TDMX0600')
+    expect(report.warnings[0]?.reason).toContain('gauge line')
+  })
+
+  it('says nothing where the holder simply never stated one', () => {
     const noGauge: Holder = { ...holder, gaugeLength: null }
     const requests = fusionInput(oneStack({ holder: noGauge }), counting())
     const { document, notes } = fusionLibrary({ tools: requests.map((each) => each.request) })
     const report = fusionReport(requests, document, notes)
 
     expect(report.exported).toBe(1)
-    expect(report.holderWarnings[0]?.catalogNumber).toBe('TDMX0600')
-    expect(report.holderWarnings[0]?.reason).toContain('gauge length')
+    expect(report.warnings).toEqual([])
   })
 
   it('does not surface what the exporter merely filled in', () => {
@@ -242,7 +266,7 @@ describe('what the export has to say for itself', () => {
 
     expect(notes.some((note) => note.kind === 'filled')).toBe(true)
     const report = fusionReport(requests, document, notes)
-    expect(report.skipped.length + report.holderWarnings.length).toBe(0)
+    expect(report.skipped.length + report.warnings.length).toBe(0)
   })
 })
 
@@ -344,6 +368,6 @@ describe('the preset every tool carries', () => {
     const report = fusionReport(requests, document, notes)
 
     expect(report.skipped).toEqual([])
-    expect(report.holderWarnings).toEqual([])
+    expect(report.warnings).toEqual([])
   })
 })
