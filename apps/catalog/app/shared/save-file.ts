@@ -22,13 +22,26 @@ export interface SaveTargets {
   readonly later: (release: () => void) => void
 }
 
+/**
+ * What can be saved: text, or the bytes of a file.
+ *
+ * A `Uint8Array` is spelled out beside `BlobPart` because an unparameterised
+ * one is `Uint8Array<ArrayBufferLike>`, which includes a view over a
+ * `SharedArrayBuffer` — and a `Blob` genuinely cannot be built from shared
+ * memory, so TypeScript is right to refuse it. `@toolpath/tool-support`'s
+ * Mastercam exporter returns exactly that type and never that case, so
+ * {@link saveFile} narrows it with a copy rather than a cast.
+ */
+export type Savable = BlobPart | Uint8Array<ArrayBufferLike>
+
 export const saveFile = (
   name: string,
-  contents: BlobPart,
+  contents: Savable,
   type: string,
   { document, url, later }: SaveTargets,
 ): void => {
-  const href = url.createObjectURL(new Blob([contents], { type }))
+  const part: BlobPart = contents instanceof Uint8Array ? new Uint8Array(contents) : contents
+  const href = url.createObjectURL(new Blob([part], { type }))
   const link = document.createElement('a')
   link.href = href
   link.download = name
@@ -42,7 +55,7 @@ export const saveFile = (
 }
 
 /** The same, against the real browser. */
-export const saveInBrowser = (name: string, contents: BlobPart, type: string): void =>
+export const saveInBrowser = (name: string, contents: Savable, type: string): void =>
   saveFile(name, contents, type, {
     document: globalThis.document,
     url: URL,
