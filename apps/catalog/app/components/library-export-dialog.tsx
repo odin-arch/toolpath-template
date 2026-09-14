@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Card, Input } from '@toolpath/ui'
 import type { ExportReport } from 'shared/export-input'
 import { useEscape } from 'shared/use-escape'
@@ -51,8 +51,67 @@ export const LibraryExportDialog = ({
   const [working, setWorking] = useState(false)
   const [result, setResult] = useState<ExportReport | null>(null)
   const canExport = name.trim() !== '' && !working
+  const surface = useRef<HTMLDivElement>(null)
 
   useEscape(true, onCancel)
+
+  /**
+   * The keyboard a modal owes whoever opened it, which `aria-modal` is a
+   * promise of.
+   *
+   * **The kit's `Dialog` is the component to reach for here and does not
+   * fit.** It is an alert: `Dialog.Provider` hands out `confirm()`, which
+   * resolves to a boolean and closes on the press, where this dialog has a
+   * name to read back off an input and a report to go on showing afterwards.
+   * Its underlying `@base-ui/react` dialog is not a dependency of this
+   * application. So the focus is written here — once, and beside the markup it
+   * governs — rather than left out.
+   *
+   * Left out is what it was. `aria-modal` tells a screen reader the page
+   * behind this is inert, and Tab walked straight onto it: the order list's
+   * own controls took the focus while the reader still announced the dialog.
+   * A claim the markup does not keep is worse than no claim, so this keeps it:
+   * the name takes the focus on open, Tab cycles within the dialog, and whatever
+   * opened the dialog gets the focus back when it goes.
+   */
+  useEffect(() => {
+    const opener = document.activeElement
+    const overlay = surface.current
+    overlay?.querySelector<HTMLElement>('#library-export-name')?.focus()
+
+    const hold = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || overlay === null) {
+        return
+      }
+      const stops = Array.from(
+        overlay.querySelectorAll<HTMLElement>(
+          'input, button, a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((stop) => !stop.hasAttribute('disabled'))
+      const first = stops[0]
+      const last = stops[stops.length - 1]
+      if (first === undefined || last === undefined) {
+        return
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+        return
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', hold)
+    return () => {
+      document.removeEventListener('keydown', hold)
+      if (opener instanceof HTMLElement) {
+        opener.focus()
+      }
+    }
+  }, [])
 
   const submit = async () => {
     if (!canExport) {
@@ -68,6 +127,7 @@ export const LibraryExportDialog = ({
 
   return (
     <div
+      ref={surface}
       role="dialog"
       aria-modal="true"
       aria-label={`Export ${format.name} tool library`}

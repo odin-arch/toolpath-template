@@ -63,6 +63,66 @@ describe('LibraryExportDialog', () => {
    * The whole point of the generalisation: one dialog, and the format decides
    * its four strings. A second copy of this component is what this pins against.
    */
+  /**
+   * `aria-modal` is a promise about the keyboard, and these are the three
+   * halves of keeping it. They are pinned because the markup makes the claim
+   * whether or not the behaviour is there, so nothing else would notice it
+   * going: a reader would simply be told the page behind is inert while Tab
+   * walked onto it.
+   */
+  describe('the focus it holds while it is open', () => {
+    it('puts the caret in the name, so the dialog is usable without a mouse', () => {
+      render(
+        <LibraryExportDialog
+          format={FUSION_FORMAT}
+          initialName="Shop library"
+          onCancel={vi.fn()}
+          onExport={vi.fn()}
+        />,
+      )
+
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Library name' }))
+    })
+
+    it('keeps Tab inside itself rather than letting it walk onto the page behind', () => {
+      render(
+        <LibraryExportDialog
+          format={FUSION_FORMAT}
+          initialName="Shop library"
+          onCancel={vi.fn()}
+          onExport={vi.fn()}
+        />,
+      )
+
+      const download = screen.getByRole('button', { name: 'Download .json' })
+      download.focus()
+      fireEvent.keyDown(document, { key: 'Tab' })
+
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Library name' }))
+    })
+
+    it('hands the focus back to whatever opened it', () => {
+      const opener = document.createElement('button')
+      document.body.appendChild(opener)
+      opener.focus()
+
+      const view = render(
+        <LibraryExportDialog
+          format={FUSION_FORMAT}
+          initialName="Shop library"
+          onCancel={vi.fn()}
+          onExport={vi.fn()}
+        />,
+      )
+      expect(document.activeElement).not.toBe(opener)
+
+      view.unmount()
+
+      expect(document.activeElement).toBe(opener)
+      opener.remove()
+    })
+  })
+
   it('takes its name, its extension and its blurb from the format it is given', async () => {
     const onExport = vi.fn().mockResolvedValue({ exported: 0, skipped: [], warnings: [] })
     render(
