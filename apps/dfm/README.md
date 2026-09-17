@@ -17,6 +17,13 @@ pnpm --filter @toolpath/dfm dev
 across restarts. `TOOLPATH_API_BASE_URL` is the server-only API URL. `pnpm setup:local` sets it
 to `https://api.toolpath.com`; change it in `apps/dfm/.env` when using another Engine environment.
 
+**Use Chrome or Firefox for local testing.** The BYOK connection cookie is `Secure`, which
+requires HTTPS — browsers make an exception for `localhost` so the plain-`http` dev server still
+works, but WebKit (Safari, and WebKit-based browsers like DuckDuckGo) doesn't reliably honour that
+exception. There the cookie silently fails to persist: connecting appears to succeed, then the very
+next request fails with "Your API-key connection has expired. Connect again." even though the key
+is fine. Chrome and Firefox both handle the `localhost` exception correctly.
+
 ## Architecture
 
 - `app/` is a client-rendered React SPA. It calls only app-owned `/api/*`
