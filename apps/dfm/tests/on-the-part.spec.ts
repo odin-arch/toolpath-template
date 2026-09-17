@@ -678,6 +678,34 @@ test('orbiting the part does not end a keyboard walk', async ({ page }) => {
   await expect(page.locator(':focus')).not.toHaveAttribute('data-row', before!)
 })
 
+test('panning the part does not end a keyboard walk', async ({ page }) => {
+  /*
+   * The same claim as orbit, above, for the other drag. Right-drag is how the
+   * camera pans (see docs/interactions.md § 3.5), and it moves focus to the
+   * canvas exactly the way orbit's left-drag does — nothing here distinguishes
+   * the two gestures, but the doc's own gap list named this one apart.
+   */
+  await at(page, FACE)
+
+  const rows = page.locator('[data-keynav="map"] [data-row]')
+  await rows.first().focus()
+  const before = await page.locator(':focus').getAttribute('data-row')
+  expect(before).toBeTruthy()
+
+  // Pan: right-button press on the part and drag.
+  const box = (await page.locator('canvas').boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5)
+  await page.mouse.down({ button: 'right' })
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.55, { steps: 6 })
+  await page.mouse.up({ button: 'right' })
+
+  // Still on the row, and the arrows still walk.
+  await expect(page.locator(':focus')).toHaveAttribute('data-row', before!)
+  await page.keyboard.press('ArrowDown')
+  await expect(page.locator(':focus')).toHaveAttribute('data-row', /.+/)
+  await expect(page.locator(':focus')).not.toHaveAttribute('data-row', before!)
+})
+
 test('a banana stands beside the part, for scale', async ({ page }) => {
   /*
    * The part fills the viewport whatever its size, so nothing on screen says

@@ -355,30 +355,34 @@ lock bug, which no amount of reading the test list would have.
 Six from the test-mapping pass. The hand pass then settled four of them, and
 turned one into a bug.
 
-1. **`Pick directions`** — the first of the five offers — **has no coverage at
-   all**, and works. It shares a branch with `from the rules` at
-   `part-inspector.tsx:1628`, differing only in what starts ticked: `from the
-rules` pre-ticks the required offers, `pick directions` starts from none,
-   "the press for somebody who already knows how they will hold the part." A
-   one-line ternary with two meaningful arms and one of them tested.
-2. **The chooser's reorder** — arrows to reorder, list re-sorts — works, and is
-   untested. Run order is the whole point of `Pick directions`, so this and (1)
-   are one soft spot.
+1. ~~**`Pick directions`** — the first of the five offers — has no coverage at
+   all, and works.~~ **Closed.** `mapping.spec.ts` → _Pick directions chooses
+   nothing for you, which is the whole of its point_ covers the branch at
+   `part-inspector.tsx:1628` directly: `from the rules` pre-ticks the required
+   offers, `pick directions` starts from none, and the test asserts the latter.
+2. ~~**The chooser's reorder** — arrows to reorder, list re-sorts — works, and
+   is untested.~~ **Closed.** `mapping.spec.ts` → _the chooser runs the ways up
+   in the order it was given, and re-sorts to match_ drives the reorder arrows
+   and asserts the list re-sorts, not just the badge.
 3. **A locked setup could still be edited.** Not a coverage gap — a **bug**, and
    the one thing the hand pass found that nothing else would have. Fixed; see
    below.
-4. **Focus surviving a pan** — checked by hand, works. Orbit has a test
-   (_orbiting the part does not end a keyboard walk_); pan still has none.
+4. ~~**Focus surviving a pan** — checked by hand, works. Orbit has a test
+   (_orbiting the part does not end a keyboard walk_); pan still has none.~~
+   **Closed.** `on-the-part.spec.ts` → _panning the part does not end a
+   keyboard walk_ is the orbit test's right-drag twin.
 5. **No-go floor and judge-by-band vs by-score** are unit-only, and unchecked by
-   hand.
+   hand. `viewport-reach.spec.ts` → _the plan is judged by rules of its own, in
+   the rules list_ toggles both controls end-to-end but stops at the UI; nothing
+   yet asserts that toggling them changes what a generator produces. Still open.
 6. **Double-click re-frame** has no test here, by design — it belongs to the
    viewer package. Worth knowing it is not this app's suite that would catch a
    regression in it.
 
-So parity holds. What is left is (1), (2) and (4) — behaviours that work and
-have no automated guard — plus (5), which nobody has looked at. None blocks the
-PR; (1) and (2) are the two worth closing first, being one feature and the one
-offer somebody reaches for when they already know the answer.
+So parity holds. (1), (2) and (4) are closed as of the tests named above. What
+is left is (5), which nobody has looked at, and would need a fixture with
+no-go-eligible readings to assert on the resulting plan rather than the toggle.
+None of this blocks the PR.
 
 ### A lock that only the generators were reading
 
